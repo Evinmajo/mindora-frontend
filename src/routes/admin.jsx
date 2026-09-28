@@ -51,6 +51,14 @@ function AdminDashboard() {
     return bookings.filter((b) => b.status === filter);
   }, [bookings, filter]);
 
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedBooking(null);
+    setTargetStatus("");
+    setCustomNote("");
+    setMeetLink("");
+  };
+
   const openActionModal = (booking, status) => {
     setSelectedBooking(booking);
     setTargetStatus(status);
@@ -66,7 +74,6 @@ function AdminDashboard() {
   const handleConfirmStatusChange = async () => {
     if (!selectedBooking) return;
 
-    // Capture the ID locally so async operations aren't bound to state changes
     const bookingId = selectedBooking._id;
     setUpdatingId(bookingId);
 
@@ -87,7 +94,7 @@ function AdminDashboard() {
         setBookings((prev) =>
           prev.map((b) => (b._id === bookingId ? json.booking : b))
         );
-        setModalOpen(false);
+        closeModal();
       } else {
         alert(`Failed to update booking: ${json.error || "Unknown error"}`);
       }
@@ -138,11 +145,11 @@ function AdminDashboard() {
 
       {/* FILTER TABS */}
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        {["All", "Pending", "Confirmed", "Cancelled"].map((tab) => (
+        {["All", "Pending Payment", "Pending", "Confirmed", "Cancelled"].map((tab) => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
-            className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
               filter === tab
                 ? "bg-black/80 text-white"
                 : "bg-white/50 text-foreground/70 hover:bg-white"
@@ -296,7 +303,7 @@ function AdminDashboard() {
               <button
                 type="button"
                 disabled={updatingId !== null}
-                onClick={() => setModalOpen(false)}
+                onClick={closeModal}
                 className="rounded-full border border-border px-5 py-2 text-xs font-medium text-foreground hover:bg-secondary disabled:opacity-50"
               >
                 Dismiss
