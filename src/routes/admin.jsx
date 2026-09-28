@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const DEFAULT_MEET_LINK = "https://meet.google.com/xwj-xcui-ekq";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -17,21 +16,27 @@ function AdminDashboard() {
   const [updatingId, setUpdatingId] = useState(null);
   const [filter, setFilter] = useState("All");
 
-  // Modal State for custom email notes & meet link
+  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [targetStatus, setTargetStatus] = useState("");
   const [customNote, setCustomNote] = useState("");
-  const [meetLink, setMeetLink] = useState(DEFAULT_MEET_LINK);
+  const [meetLink, setMeetLink] = useState("");
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/admin/bookings`);
+      if (!res.ok) throw new Error("Server error fetching bookings");
       const json = await res.json();
-      if (json.success) setBookings(json.data);
+      if (json.success) {
+        setBookings(json.data);
+      } else {
+        alert(json.error || "Failed to fetch bookings.");
+      }
     } catch (err) {
       console.error("Error fetching bookings:", err);
+      alert("Unable to connect to server.");
     } finally {
       setLoading(false);
     }
@@ -46,12 +51,10 @@ function AdminDashboard() {
     return bookings.filter((b) => b.status === filter);
   }, [bookings, filter]);
 
-  // Open confirmation modal prior to status update
   const openActionModal = (booking, status) => {
     setSelectedBooking(booking);
     setTargetStatus(status);
-    // Pre-fill with booking link if already exists, else use default static link
-    setMeetLink(booking.meetLink || DEFAULT_MEET_LINK);
+    setMeetLink(booking.meetLink || "");
     setCustomNote(
       status === "Confirmed"
         ? "We are looking forward to our session! Please use the Google Meet link below at your scheduled time."
@@ -60,33 +63,31 @@ function AdminDashboard() {
     setModalOpen(true);
   };
 
-  // Dispatch PATCH request to backend
   const handleConfirmStatusChange = async () => {
     if (!selectedBooking) return;
 
-    setUpdatingId(selectedBooking._id);
-    setModalOpen(false);
+    // Capture the ID locally so async operations aren't bound to state changes
+    const bookingId = selectedBooking._id;
+    setUpdatingId(bookingId);
 
     try {
-      const res = await fetch(
-        `${API_BASE}/api/admin/bookings/${selectedBooking._id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: targetStatus,
-            customNote,
-            meetLink: targetStatus === "Confirmed" ? (meetLink || DEFAULT_MEET_LINK) : "",
-          }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/admin/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: targetStatus,
+          customNote,
+          meetLink: targetStatus === "Confirmed" ? meetLink : "",
+        }),
+      });
 
       const json = await res.json();
 
       if (res.ok && json.success) {
         setBookings((prev) =>
-          prev.map((b) => (b._id === selectedBooking._id ? json.booking : b))
+          prev.map((b) => (b._id === bookingId ? json.booking : b))
         );
+        setModalOpen(false);
       } else {
         alert(`Failed to update booking: ${json.error || "Unknown error"}`);
       }
@@ -95,7 +96,6 @@ function AdminDashboard() {
       alert("Error connecting to server.");
     } finally {
       setUpdatingId(null);
-      setSelectedBooking(null);
     }
   };
 
@@ -107,9 +107,12 @@ function AdminDashboard() {
       });
       if (res.ok) {
         setBookings((prev) => prev.filter((b) => b._id !== id));
+      } else {
+        alert("Failed to delete booking.");
       }
     } catch (err) {
       console.error("Error deleting record:", err);
+      alert("Error connecting to server.");
     }
   };
 
@@ -126,13 +129,14 @@ function AdminDashboard() {
         </div>
         <button
           onClick={fetchBookings}
-          className="rounded-full bg-white/60 px-5 py-2.5 text-xs font-medium ring-1 ring-black/5 hover:bg-white transition-colors"
+          disabled={loading}
+          className="rounded-full bg-white/60 px-5 py-2.5 text-xs font-medium ring-1 ring-black/5 hover:bg-white transition-colors disabled:opacity-50"
         >
-          Refresh Data
+          {loading ? "Refreshing..." : "Refresh Data"}
         </button>
       </div>
 
-      {/* STATUS FILTER TABS */}
+      {/* FILTER TABS */}
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
         {["All", "Pending", "Confirmed", "Cancelled"].map((tab) => (
           <button
@@ -261,7 +265,6 @@ function AdminDashboard() {
               <span className="font-medium text-foreground">{selectedBooking.email}</span>.
             </p>
 
-            {/* GOOGLE MEET LINK INPUT */}
             {targetStatus === "Confirmed" && (
               <div className="mt-5">
                 <label className="block text-xs font-medium text-foreground/70 mb-1.5">
@@ -269,7 +272,7 @@ function AdminDashboard() {
                 </label>
                 <input
                   type="url"
-                  placeholder="https://meet.google.com/xwj-xcui-ekq"
+                  placeholder="https://meet.google.com/..."
                   value={meetLink}
                   onChange={(e) => setMeetLink(e.target.value)}
                   className="w-full rounded-2xl bg-slate-50 p-3.5 text-xs text-foreground ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -292,19 +295,21 @@ function AdminDashboard() {
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
+                disabled={updatingId !== null}
                 onClick={() => setModalOpen(false)}
-                className="rounded-full border border-border px-5 py-2 text-xs font-medium text-foreground hover:bg-secondary"
+                className="rounded-full border border-border px-5 py-2 text-xs font-medium text-foreground hover:bg-secondary disabled:opacity-50"
               >
                 Dismiss
               </button>
               <button
                 type="button"
+                disabled={updatingId !== null}
                 onClick={handleConfirmStatusChange}
-                className={`rounded-full px-5 py-2 text-xs font-medium text-cream ${
+                className={`rounded-full px-5 py-2 text-xs font-medium text-cream disabled:opacity-50 ${
                   targetStatus === "Confirmed" ? "bg-moss" : "bg-rose-600"
                 }`}
               >
-                Send Email & {targetStatus}
+                {updatingId ? "Sending..." : `Send Email & ${targetStatus}`}
               </button>
             </div>
           </div>
