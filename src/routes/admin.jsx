@@ -62,7 +62,10 @@ function AdminDashboard() {
   const openActionModal = (booking, status) => {
     setSelectedBooking(booking);
     setTargetStatus(status);
-    setMeetLink(booking.meetLink || "");
+    // Sets default meet link to your recurring link if none exists on the booking entry
+    setMeetLink(booking.meetLink || "https://meet.google.com/xwj-xcui-ekq");
+    
+    // Sets default custom note for both statuses while remaining fully editable
     setCustomNote(
       status === "Confirmed"
         ? "We are looking forward to our session! Please use the Google Meet link below at your scheduled time."
