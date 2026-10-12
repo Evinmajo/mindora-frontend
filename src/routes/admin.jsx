@@ -63,7 +63,7 @@ function AdminDashboard() {
     setSelectedBooking(booking);
     setTargetStatus(status);
     // Sets default meet link to your recurring link if none exists on the booking entry
-    setMeetLink(booking.meetLink || "https://meet.google.com/xwj-xcui-ekq");
+    setMeetLink(booking.meetLink || "https://meet.google.com/jkg-zoat-kzz");
     
     // Sets default custom note for both statuses while remaining fully editable
     setCustomNote(
