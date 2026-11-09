@@ -21,6 +21,7 @@ const NAV_LINKS = [
   { to: "/about", label: "About" },
   { to: "/services", label: "Services" },
   { to: "/resources", label: "Resources" },
+  { to: "/feedback", label: "Feedback" },
   { to: "/contact", label: "Contact" },
 ];
 
