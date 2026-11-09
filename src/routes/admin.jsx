@@ -164,6 +164,25 @@ function AdminDashboard() {
     }
   };
 
+  const handleToggleHomepageReview = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/feedback/${id}/toggle`, {
+        method: "PATCH",
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setFeedbackList((prev) =>
+          prev.map((item) => (item._id === id ? json.feedback : item))
+        );
+      } else {
+        alert(json.error || "Failed to update review status.");
+      }
+    } catch (err) {
+      console.error("Error toggling review visibility:", err);
+      alert("Error connecting to server.");
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-6 pt-12 pb-20">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -375,12 +394,24 @@ function AdminDashboard() {
                         )}
                       </td>
                       <td className="py-4 text-right whitespace-nowrap">
-                        <button
-                          onClick={() => handleDeleteFeedback(fb._id)}
-                          className="rounded-full bg-red-500/10 px-3 py-1 text-xs text-red-600 hover:bg-red-500/20"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleToggleHomepageReview(fb._id)}
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                              fb.isApproved
+                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                : "bg-secondary text-foreground/70 hover:bg-secondary/80"
+                            }`}
+                          >
+                            {fb.isApproved ? "✓ Shown on Home" : "+ Show on Home"}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFeedback(fb._id)}
+                            className="rounded-full bg-red-500/10 px-3 py-1 text-xs text-red-600 hover:bg-red-500/20"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
