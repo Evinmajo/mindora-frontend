@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
 import heroRoom from "@/assets/hero-room.jpg";
 import hasnaAsset from "@/assets/hasna.jpg";
 import { SERVICES, PRICING, SITE, CRISIS_NOTE } from "@/lib/site";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,6 +29,19 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const [testimonials, setTestimonials] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/feedback`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) {
+          setTestimonials(json.data);
+        }
+      })
+      .catch((err) => console.warn("Could not fetch testimonials:", err));
+  }, []);
+
   return (
     <div>
       {/* HERO */}
@@ -130,6 +146,42 @@ function Index() {
           Follow-up sessions are arranged after your initial consultation.
         </p>
       </section>
+
+      {/* CLIENT TESTIMONIALS SECTION (Dynamic from Admin Toggle) */}
+      {testimonials.length > 0 && (
+        <section className="mx-auto max-w-6xl px-6 py-20">
+          <div className="mb-12 max-w-[44ch]">
+            <p className="mb-3 text-xs font-medium tracking-[0.22em] text-sagedeep uppercase">
+              Client Experiences
+            </p>
+            <h2 className="font-display text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+              Kind words from those we've supported.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {testimonials.map((t) => (
+              <div
+                key={t._id}
+                className="flex flex-col justify-between rounded-3xl bg-white/50 p-7 ring-1 ring-black/5 backdrop-blur-md"
+              >
+                <div>
+                  <div className="text-amber-500 text-sm mb-3">
+                    {"★".repeat(t.rating)}
+                    <span className="text-foreground/20">{"★".repeat(5 - t.rating)}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/70 italic">
+                    "{t.message}"
+                  </p>
+                </div>
+                <div className="mt-6 border-t border-black/5 pt-4 flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">{t.name}</span>
+                  <span className="text-sagedeep">{t.service}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* SERVICES PREVIEW */}
       <section className="mx-auto max-w-6xl px-6 py-20">
